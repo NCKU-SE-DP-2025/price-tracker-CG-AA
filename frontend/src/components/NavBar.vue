@@ -67,7 +67,6 @@ export default {
     cursor: pointer;
 }
 
-/* 2025/9/25 HW3 Task1 start */
 @media (max-width: 767px) {
     .navbar ul {
         display: none;
@@ -94,7 +93,6 @@ export default {
 @media (min-width: 768px){
     .navbar ul { display: flex; }
 }
-/* 2025/9/25 HW3 Task1 end */
 
 .title > a{
     font-size: 1.4em;
