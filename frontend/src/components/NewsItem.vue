@@ -15,7 +15,7 @@
             <i v-if="!hasDetails && !news.isSummaryLoading && isLoggedIn" class="bi bi-stars summary-btn" @click="fetchSummary"></i>
             <div v-if="!hasDetails && news.isSummaryLoading && isLoggedIn" class="loader"></div>
         </div>
-        <div class="upvote-btn" @click="toggleUpvote(news.id)" v-if="'upvotes' in news">
+        <div v-if="'upvotes' in news" class="upvote-btn" @click="toggleUpvote(news.id)">
             <i class="bi bi-fire" :class="{'fire-upvoted': news.is_upvoted}"></i>
             <span>{{ news.upvotes }}</span>
         </div>
@@ -23,42 +23,44 @@
     </div>
 </template>
 
-<script>
+<script setup>
+import { computed } from 'vue';
 import { useAuthStore } from '@/stores/auth';
 import { useNewsStore } from '@/stores/news';
-export default {
-    props: {
-        news: {
-            type: Object,
-            required: true
-        }
-    },
-    computed: {
-        hasDetails() {
-            return this.news.reason && this.news.summary;
-        },
-        shortContent() {
-            return this.news.content.length > 200 ? this.news.content.substr(0, 200) + '...' : this.news.content;
-        },
-        isLoggedIn(){
-            const userStore = useAuthStore();
-            return userStore.isLoggedIn;
-        }
-    },
-    methods:{
-        showDialog(){
-            this.$emit('show-dialog');
-        },
-        fetchSummary(){
-            if(this.isLoading) return;
-            this.isLoading = true;
-            this.$emit('fetch-summary');
-        },
-        toggleUpvote(newsId){
-            useNewsStore().toggleUpvote(newsId);
-        }
+
+const props = defineProps({
+    news: {
+        type: Object,
+        required: true
     }
-};
+});
+
+const emit = defineEmits(['show-dialog', 'fetch-summary']);
+
+const hasDetails = computed(() => {
+    return props.news.reason && props.news.summary;
+});
+
+const shortContent = computed(() => {
+    return props.news.content.length > 200 ? props.news.content.substr(0, 200) + '...' : props.news.content;
+});
+
+const isLoggedIn = computed(() => {
+    const userStore = useAuthStore();
+    return userStore.isLoggedIn;
+});
+
+function showDialog(){
+    emit('show-dialog');
+}
+
+function fetchSummary(){
+    emit('fetch-summary');
+}
+
+function toggleUpvote(newsId){
+    useNewsStore().toggleUpvote(newsId);
+}
 </script>
 
 <style scoped>
