@@ -13,54 +13,51 @@
                 <p v-if="errors.passwordConfirm" class="error">{{ errors.passwordConfirm }}</p>
 
                 <div class="ops">
-                    <button type="submit" id="register">註冊</button>
+                    <button id="register" type="submit">註冊</button>
                 </div>
             </form>
         </div>
     </div>
 </template>
 
-<script>
+<script setup>
+import { ref, reactive } from 'vue';
 import { useAuthStore } from '@/stores/auth';
 
-export default {
-    data() {
-        return {
-            username: '',
-            password: '',
-            passwordConfirm: '',
-            errors: {
-                username: '',
-                password: '',
-                passwordConfirm: ''
-            }
-        };
-    },
-    methods: {
-        register() {
-            if (this.validate()) {
-                const userStore = useAuthStore();
-                userStore.register(this.username, this.password);
-            }
-        },
-        validate() {
-            let valid = true;
-            this.errors = { username: '', password: '', passwordConfirm: '' };
+const username = ref('');
+const password = ref('');
+const passwordConfirm = ref('');
+const errors = reactive({
+    username: '',
+    password: '',
+    passwordConfirm: ''
+});
 
-            if (!this.username.trim()) {
-                this.errors.username = 'Username is required.';
-                valid = false;
-            }
-            if (!this.password) {
-                this.errors.password = 'Password is required.';
-                valid = false;
-            }
-            if (this.password !== this.passwordConfirm) {
-                this.errors.passwordConfirm = 'Passwords do not match!';
-                valid = false;
-            }
-            return valid;
-        }
+function validate() {
+    let valid = true;
+    errors.username = '';
+    errors.password = '';
+    errors.passwordConfirm = '';
+
+    if (!username.value.trim()) {
+        errors.username = 'Username is required.';
+        valid = false;
+    }
+    if (!password.value) {
+        errors.password = 'Password is required.';
+        valid = false;
+    }
+    if (password.value !== passwordConfirm.value) {
+        errors.passwordConfirm = 'Passwords do not match!';
+        valid = false;
+    }
+    return valid;
+}
+
+function register() {
+    if (validate()) {
+        const userStore = useAuthStore();
+        userStore.register(username.value, password.value);
     }
 }
 </script>

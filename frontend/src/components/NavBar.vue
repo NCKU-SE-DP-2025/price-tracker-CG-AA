@@ -7,41 +7,34 @@
             <li><RouterLink to="/trending" @click="toggleMenu">物價趨勢</RouterLink></li>
             <li><RouterLink to="/news" @click="toggleMenu">相關新聞</RouterLink></li>
             <li v-if="!isLoggedIn"><RouterLink to="/login" @click="toggleMenu">登入</RouterLink></li>
-            <li v-else @click="logout, toggleMenu">Hi, {{getUserName}}! 登出</li>
+            <li v-else @click="handleLogout">Hi, {{getUserName}}! 登出</li>
         </ul>
     </nav>
 </template>
 
-<script>
+<script setup>
+import { ref, computed } from 'vue';
 import { useAuthStore } from '@/stores/auth';
 
-export default {
-    name: 'NavBar',
-    data() {
-        return {
-            isMenuOpen: false,
-        };
-    },
-    computed: {
-        isLoggedIn(){
-            const userStore = useAuthStore();
-            return userStore.isLoggedIn;
-        },
-        getUserName(){
-            const userStore = useAuthStore();
-            return userStore.getUserName;
-        }
-    },
-    methods: {
-        toggleMenu() {
-            this.isMenuOpen = !this.isMenuOpen;
-        },
-        logout(){
-            const userStore = useAuthStore();
-            userStore.logout();
-        }
-    }
-};
+const isMenuOpen = ref(false);
+
+const userStore = useAuthStore();
+
+const isLoggedIn = computed(() => userStore.isLoggedIn);
+const getUserName = computed(() => userStore.getUserName);
+
+function toggleMenu() {
+    isMenuOpen.value = !isMenuOpen.value;
+}
+
+function logout() {
+    userStore.logout();
+}
+
+function handleLogout() {
+    logout();
+    toggleMenu();
+}
 </script>
 
 <style scoped>

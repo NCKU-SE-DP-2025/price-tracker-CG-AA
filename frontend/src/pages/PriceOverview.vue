@@ -3,55 +3,38 @@
         <h1>各類商品物價概覽</h1>
         <h3 v-if="!isLoading" class="subtitle">資料更新時間：{{updateTime}}</h3>
         <div class="prices">
-            <CategoryPrice class="category" v-for="category in categoryList" :key="category"
-                :category="category" :isLoading="isLoading" :errorMessage="errorMessage" :priceData="getPriceData(category)"></CategoryPrice>
+            <CategoryPrice 
+                v-for="category in categoryList" 
+                :key="category"
+                class="category"
+                :category="category" 
+                :is-loading="isLoading" 
+                :error-message="errorMessage" 
+                :price-data="getPriceData(category)"></CategoryPrice>
         </div>
     </div>
 </template>
 
-<script>
+<script setup>
+import { computed, onMounted } from 'vue';
 import CategoryPrice from '@/components/CategoryPrice.vue';
 import Categories from '@/constants/categories';
 import { usePricesStore } from '@/stores/prices';
 
-export default {
-    name: 'PriceOverview',
-    data() {
-        return {
-            prices: {},
-        };
-    },
-    components: {
-        CategoryPrice
-    },
-    computed: {
-        categoryList() {
-            return Object.keys(Categories);
-        },
-        isLoading(){
-            const store = usePricesStore();
-            return store.isLoading;
-        },
-        errorMessage(){
-            const store = usePricesStore();
-            return store.errorMessage;
-        },
-        updateTime(){
-            const store = usePricesStore();
-            return store.updatedTime;
-        }
-    },
-    methods:{
-        getPriceData(category){
-            const store = usePricesStore();
-            return store.getPricesByCategory(category);
-        }    
-    },
-    created() {
-        const store = usePricesStore();
-        store.fetchPrices();
-    }
-};
+const store = usePricesStore();
+
+const categoryList = computed(() => Object.keys(Categories));
+const isLoading = computed(() => store.isLoading);
+const errorMessage = computed(() => store.errorMessage);
+const updateTime = computed(() => store.updatedTime);
+
+function getPriceData(category) {
+    return store.getPricesByCategory(category);
+}
+
+onMounted(() => {
+    store.fetchPrices();
+});
 </script>
 
 <style scoped>
