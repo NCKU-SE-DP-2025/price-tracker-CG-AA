@@ -56,12 +56,18 @@ onMounted(() => {
 
 <style scoped>
 .wrapper {
-    padding: 3em 5em;
+    padding: 3em 1em;
     background: #f3f3f3;
     min-height: calc(100vh - 4.5em);
     height: calc(100% - 4.5em);
     box-sizing: border-box;
     width: 100%;
+}
+
+@media (min-width: 768px) {
+    .wrapper {
+        padding: 3em 5em;
+    }
 }
 
 .content {
@@ -75,7 +81,21 @@ onMounted(() => {
 
 .selects {
     display: flex;
+    flex-direction: column;
     justify-content: flex-start;
+}
+
+.selects > select {
+    margin-bottom: 1em;
+}
+
+@media (min-width: 768px) {
+    .selects {
+        flex-direction: row;
+    }
+    .selects > select {
+        margin-bottom: 0;
+    }
 }
 
 .selects>select {
