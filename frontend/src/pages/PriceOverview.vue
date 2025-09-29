@@ -3,14 +3,16 @@
         <h1>各類商品物價概覽</h1>
         <h3 v-if="!isLoading" class="subtitle">資料更新時間：{{updateTime}}</h3>
         <div class="prices">
+            <transition-group name="fade">
             <CategoryPrice 
                 v-for="category in categoryList" 
                 :key="category"
-                class="category"
+                class="category animate__animated animate__fadeIn"
                 :category="category" 
                 :is-loading="isLoading" 
                 :error-message="errorMessage" 
                 :price-data="getPriceData(category)"></CategoryPrice>
+            </transition-group>
         </div>
     </div>
 </template>

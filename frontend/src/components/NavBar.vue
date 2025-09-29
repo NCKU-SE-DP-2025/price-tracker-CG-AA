@@ -93,6 +93,10 @@ function handleLogout() {
     color: #2c3e50 !important;
 }
 
+.title > a:hover {
+    animation: pulse 1s;
+}
+
 .navbar li {
     color: #575B5D;
     margin: 0 .5em;
