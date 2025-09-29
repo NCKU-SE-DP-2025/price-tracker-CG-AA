@@ -1,22 +1,23 @@
 <template>
-    <nav class="navbar">
+    <nav class="navbar" ref="navBar">
         <div class="title"> <RouterLink to="/overview">價格追蹤小幫手</RouterLink></div>
-        <div class="hamburger" @click="toggleMenu">&#9776;</div>
+        <div class="hamburger" @click.stop="toggleMenu">&#9776;</div>
         <ul class="options" :class="{ 'is-active': isMenuOpen }">
-            <li><RouterLink to="/overview" @click="toggleMenu">物價概覽</RouterLink></li>
-            <li><RouterLink to="/trending" @click="toggleMenu">物價趨勢</RouterLink></li>
-            <li><RouterLink to="/news" @click="toggleMenu">相關新聞</RouterLink></li>
-            <li v-if="!isLoggedIn"><RouterLink to="/login" @click="toggleMenu">登入</RouterLink></li>
+            <li><RouterLink to="/overview" @click="closeMenu">物價概覽</RouterLink></li>
+            <li><RouterLink to="/trending" @click="closeMenu">物價趨勢</RouterLink></li>
+            <li><RouterLink to="/news" @click="closeMenu">相關新聞</RouterLink></li>
+            <li v-if="!isLoggedIn"><RouterLink to="/login" @click="closeMenu">登入</RouterLink></li>
             <li v-else @click="handleLogout">Hi, {{getUserName}}! 登出</li>
         </ul>
     </nav>
 </template>
 
 <script setup>
-import { ref, computed } from 'vue';
+import { ref, computed, watch, onBeforeUnmount } from 'vue';
 import { useAuthStore } from '@/stores/auth';
 
 const isMenuOpen = ref(false);
+const navBar = ref(null);
 
 const userStore = useAuthStore();
 
@@ -27,14 +28,36 @@ function toggleMenu() {
     isMenuOpen.value = !isMenuOpen.value;
 }
 
+function closeMenu() {
+    isMenuOpen.value = false;
+}
+
 function logout() {
     userStore.logout();
 }
 
 function handleLogout() {
     logout();
-    toggleMenu();
+    closeMenu();
 }
+
+const handleClickOutside = (event) => {
+    if (navBar.value && !navBar.value.contains(event.target)) {
+        closeMenu();
+    }
+};
+
+watch(isMenuOpen, (isOpen) => {
+    if (isOpen) {
+        document.addEventListener('click', handleClickOutside);
+    } else {
+        document.removeEventListener('click', handleClickOutside);
+    }
+});
+
+onBeforeUnmount(() => {
+    document.removeEventListener('click', handleClickOutside);
+});
 </script>
 
 <style scoped>
@@ -91,6 +114,10 @@ function handleLogout() {
     font-size: 1.4em;
     font-weight: bold;
     color: #2c3e50 !important;
+}
+
+.title > a:hover {
+    animation: pulse 1s;
 }
 
 .navbar li {
