@@ -61,6 +61,10 @@ onBeforeUnmount(() => {
 </script>
 
 <style scoped>
+.router-link-active {
+    font-weight: bold;
+}
+
 .navbar {
     display: flex;
     justify-content: space-between;
