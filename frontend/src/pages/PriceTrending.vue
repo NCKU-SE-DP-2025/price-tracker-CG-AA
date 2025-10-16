@@ -22,67 +22,52 @@
     </div>
 </template>
 
-<script>
+<script setup>
+import { ref, computed, watch, onMounted } from 'vue';
 import { usePricesStore } from '@/stores/prices';
 import Categories from '@/constants/categories';
 import TrendingTable from '@/components/TrendingTable.vue';
 import TrendingChart from '@/components/TrendingChart.vue';
 
-export default {
-    components: {
-        TrendingTable,
-        TrendingChart
-    },
-    data() {
-        return {
-            selectedCategory: '',
-            selectedProduct: '',
-            productList: [],
-        };
-    },
-    computed: {
-        store() {
-            return usePricesStore();
-        },
-        categoryKeys() {
-            return Object.keys(Categories);
-        },
-        products() {
-            return this.selectedCategory ? this.store.getPricesByCategory(this.selectedCategory) : [];
-        },
-    },
-    methods: {
-        categoryName(category) {
-            return Categories[category];
-        }
-    },
-    watch: {
-        selectedCategory() {
-            this.selectedProduct = '';
-            const store = usePricesStore();
-            this.productList = store.getProductList(this.selectedCategory);
-            this.productData = null;
-        },
-        selectedProduct() {
-            console.log(this.selectedProduct);
-        }
-    },
-    created() {
-        const store = usePricesStore();
-        store.fetchPrices();
-    }
-};
+const selectedCategory = ref('');
+const selectedProduct = ref('');
+
+const store = usePricesStore();
+
+const categoryKeys = computed(() => Object.keys(Categories));
+
+const products = computed(() => {
+    return selectedCategory.value ? store.getPricesByCategory(selectedCategory.value) : [];
+});
+
+function categoryName(category) {
+    return Categories[category];
+}
+
+watch(selectedCategory, () => {
+    selectedProduct.value = '';
+});
+
+onMounted(() => {
+    store.fetchPrices();
+});
 </script>
 
 
 <style scoped>
 .wrapper {
-    padding: 3em 5em;
+    padding: 3em 1em;
     background: #f3f3f3;
     min-height: calc(100vh - 4.5em);
     height: calc(100% - 4.5em);
     box-sizing: border-box;
     width: 100%;
+}
+
+@media (min-width: 768px) {
+    .wrapper {
+        padding: 3em 5em;
+    }
 }
 
 .content {
@@ -96,7 +81,21 @@ export default {
 
 .selects {
     display: flex;
+    flex-direction: column;
     justify-content: flex-start;
+}
+
+.selects > select {
+    margin-bottom: 1em;
+}
+
+@media (min-width: 768px) {
+    .selects {
+        flex-direction: row;
+    }
+    .selects > select {
+        margin-bottom: 0;
+    }
 }
 
 .selects>select {

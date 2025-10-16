@@ -1,17 +1,15 @@
 <template>
   <NavBar class="navbar"></NavBar>
-  <RouterView class="render"></RouterView>
+  <router-view v-slot="{ Component }">
+    <transition name="fade" mode="out-in">
+      <component :is="Component" class="render" />
+    </transition>
+  </router-view>
 </template>
 
-<script>
+<script setup>
 // import { RouterView } from 'vue-router';
 import NavBar from './components/NavBar.vue'
-export default {
-  name: 'App',
-  components: {
-    NavBar,
-  }
-}
 </script>
 
 <style>
@@ -29,5 +27,14 @@ export default {
 }
 .render{
   margin-top: 4.5em;
+}
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.5s ease;
+}
+
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
 }
 </style>

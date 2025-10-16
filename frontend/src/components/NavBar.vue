@@ -1,41 +1,70 @@
 <template>
-    <nav class="navbar">
+    <nav class="navbar" ref="navBar">
         <div class="title"> <RouterLink to="/overview">價格追蹤小幫手</RouterLink></div>
-        <ul class="options">
-            <li><RouterLink to="/overview">物價概覽</RouterLink></li>
-            <li><RouterLink to="/trending">物價趨勢</RouterLink></li>
-            <li><RouterLink to="/news">相關新聞</RouterLink></li>
-            <li v-if="!isLoggedIn"><RouterLink to="/login">登入</RouterLink></li>
-            <li v-else @click="logout">Hi, {{getUserName}}! 登出</li>
+        <div class="hamburger" @click.stop="toggleMenu">&#9776;</div>
+        <ul class="options" :class="{ 'is-active': isMenuOpen }">
+            <li><RouterLink to="/overview" @click="closeMenu">物價概覽</RouterLink></li>
+            <li><RouterLink to="/trending" @click="closeMenu">物價趨勢</RouterLink></li>
+            <li><RouterLink to="/news" @click="closeMenu">相關新聞</RouterLink></li>
+            <li v-if="!isLoggedIn"><RouterLink to="/login" @click="closeMenu">登入</RouterLink></li>
+            <li v-else @click="handleLogout">Hi, {{getUserName}}! 登出</li>
         </ul>
     </nav>
 </template>
 
-<script>
+<script setup>
+import { ref, computed, watch, onBeforeUnmount } from 'vue';
 import { useAuthStore } from '@/stores/auth';
 
-export default {
-    name: 'NavBar',
-    computed: {
-        isLoggedIn(){
-            const userStore = useAuthStore();
-            return userStore.isLoggedIn;
-        },
-        getUserName(){
-            const userStore = useAuthStore();
-            return userStore.getUserName;
-        }
-    },
-    methods: {
-        logout(){
-            const userStore = useAuthStore();
-            userStore.logout();
-        }
+const isMenuOpen = ref(false);
+const navBar = ref(null);
+
+const userStore = useAuthStore();
+
+const isLoggedIn = computed(() => userStore.isLoggedIn);
+const getUserName = computed(() => userStore.getUserName);
+
+function toggleMenu() {
+    isMenuOpen.value = !isMenuOpen.value;
+}
+
+function closeMenu() {
+    isMenuOpen.value = false;
+}
+
+function logout() {
+    userStore.logout();
+}
+
+function handleLogout() {
+    logout();
+    closeMenu();
+}
+
+const handleClickOutside = (event) => {
+    if (navBar.value && !navBar.value.contains(event.target)) {
+        closeMenu();
     }
 };
+
+watch(isMenuOpen, (isOpen) => {
+    if (isOpen) {
+        document.addEventListener('click', handleClickOutside);
+    } else {
+        document.removeEventListener('click', handleClickOutside);
+    }
+});
+
+onBeforeUnmount(() => {
+    document.removeEventListener('click', handleClickOutside);
+});
 </script>
 
 <style scoped>
+.router-link-active {
+    font-weight: bold;
+}
+
 .navbar {
     display: flex;
     justify-content: space-between;
@@ -49,14 +78,50 @@ export default {
 
 .navbar ul {
     list-style: none;
-    display: flex;
     justify-content: space-around;
+}
+
+.hamburger {
+    display: none;
+    font-size: 2em;
+    cursor: pointer;
+}
+
+@media (max-width: 767px) {
+    .navbar ul {
+        display: none;
+        position: absolute;
+        top: 4.5em;
+        left: 0;
+        background-color: #f3f3f3;
+        width: 100%;
+        flex-direction: column;
+        align-items: center;
+        box-shadow: 0 5px 5px -5px #000000;
+    }
+    .navbar ul.is-active {
+        display: flex;
+    }
+    .navbar ul li {
+        padding: 1em 0;
+    }
+    .hamburger {
+        display: block;
+    }
+}
+
+@media (min-width: 768px){
+    .navbar ul { display: flex; }
 }
 
 .title > a{
     font-size: 1.4em;
     font-weight: bold;
     color: #2c3e50 !important;
+}
+
+.title > a:hover {
+    animation: pulse 1s;
 }
 
 .navbar li {
