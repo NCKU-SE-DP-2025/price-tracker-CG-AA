@@ -1,21 +1,35 @@
-import pytest
-from fastapi.testclient import TestClient
-from sqlalchemy import create_engine, StaticPool
-from sqlalchemy.orm import sessionmaker
 import json
-from jose import jwt
-from main import app
-from main import Base, NewsArticle, User, session_opener, user_news_association_table
-from main import NewsSumaryRequestSchema, PromptRequest
-from main import pwd_context
 from unittest.mock import Mock
 
+import pytest
+from fastapi.testclient import TestClient
+from jose import jwt
+from sqlalchemy import StaticPool, create_engine
+from sqlalchemy.orm import sessionmaker
+
+from main import (
+    Base,
+    NewsArticle,
+    NewsSumaryRequestSchema,
+    PromptRequest,
+    User,
+    app,
+    pwd_context,
+    session_opener,
+    user_news_association_table,
+)
 
 SECRET_KEY = "1892dhianiandowqd0n"
 ALGORITHM = "HS256"
 SQLALCHEMY_DATABASE_URL = "sqlite:///./test.db"
-engine = create_engine(SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False}, poolclass=StaticPool)
-TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+engine = create_engine(
+    SQLALCHEMY_DATABASE_URL,
+    connect_args={"check_same_thread": False},
+    poolclass=StaticPool,
+)
+TestingSessionLocal = sessionmaker(
+    autocommit=False, autoflush=False, bind=engine
+)
 Base.metadata.create_all(bind=engine)
 
 
@@ -30,11 +44,13 @@ def override_session_opener():
 app.dependency_overrides[session_opener] = override_session_opener
 client = TestClient(app)
 
+
 @pytest.fixture(scope="module")
 def clear_users():
     with next(override_session_opener()) as db:
         db.query(User).delete()
         db.commit()
+
 
 @pytest.fixture(scope="module")
 def test_user(clear_users):
@@ -50,7 +66,9 @@ def test_user(clear_users):
 
 @pytest.fixture(scope="module")
 def test_token(test_user):
-    access_token = jwt.encode({"sub": test_user.username}, SECRET_KEY, algorithm=ALGORITHM)
+    access_token = jwt.encode(
+        {"sub": test_user.username}, SECRET_KEY, algorithm=ALGORITHM
+    )
     return access_token
 
 
@@ -63,7 +81,7 @@ def test_articles():
             content="This is test content 1",
             time="2024-01-01",
             summary="Test summary 1",
-            reason="Test reason 1"
+            reason="Test reason 1",
         )
         article_2 = NewsArticle(
             url="https://example.com/test-news-2",
@@ -71,7 +89,7 @@ def test_articles():
             content="This is test content 2",
             time="2024-01-02",
             summary="Test summary 2",
-            reason="Test reason 2"
+            reason="Test reason 2",
         )
         db.add_all([article_1, article_2])
         db.commit()
@@ -108,8 +126,9 @@ def test_read_user_news(test_user, test_token, test_articles):
     assert json_response[1]["title"] == "Test News 1"
     assert json_response[1]["is_upvoted"] is False
 
+
 def mock_openai(mocker, return_content):
-    mock_openai_client = mocker.patch('main.OpenAI')
+    mock_openai_client = mocker.patch("main.OpenAI")
 
     mock_message = Mock()
     mock_message.content = return_content
@@ -120,19 +139,25 @@ def mock_openai(mocker, return_content):
     mock_completion = Mock()
     mock_completion.choices = [mock_choice]
 
-    mock_openai_client.return_value.chat.completions.create.return_value = mock_completion
+    mock_openai_client.return_value.chat.completions.create.return_value = (
+        mock_completion
+    )
 
     return mock_openai_client
+
 
 def test_search_news(mocker):
     mock_openai(mocker, "keywords")
 
-    mock_get_new_info = mocker.patch("main.get_new_info", return_value=[
-        {"titleLink": "http://example.com/news1"}
-    ])
+    mock_get_new_info = mocker.patch(
+        "main.get_new_info",
+        return_value=[{"titleLink": "http://example.com/news1"}],
+    )
 
-    mock_get = mocker.patch("main.requests.get", return_value=mocker.Mock(
-        text="""
+    mock_get = mocker.patch(
+        "main.requests.get",
+        return_value=mocker.Mock(
+            text="""
         <html>
         <h1 class="article-content__title">Test Title</h1>
         <time class="article-content__time">2024-09-10</time>
@@ -141,7 +166,8 @@ def test_search_news(mocker):
         </section>
         </html>
         """
-    ))
+        ),
+    )
 
     request_body = {"prompt": "Test search prompt"}
 
@@ -158,11 +184,15 @@ def test_search_news(mocker):
 
 def test_news_summary(mocker, test_token):
     headers = {"Authorization": f"Bearer {test_token}"}
-    openai_response = json.dumps({"影響": "test impact", "原因": "test reason"})
+    openai_response = json.dumps(
+        {"影響": "test impact", "原因": "test reason"}
+    )
     mock_openai(mocker, openai_response)
 
     request_body = NewsSumaryRequestSchema(content="Test news content")
-    response = client.post("/api/v1/news/news_summary", json=request_body.dict(), headers=headers)
+    response = client.post(
+        "/api/v1/news/news_summary", json=request_body.dict(), headers=headers
+    )
 
     assert response.status_code == 200
     json_response = response.json()
@@ -174,7 +204,9 @@ def test_upvote_article(test_user_and_articles, test_token):
     user, articles = test_user_and_articles
     headers = {"Authorization": f"Bearer {test_token}"}
 
-    response = client.post(f"/api/v1/news/{articles[0].id}/upvote", headers=headers)
+    response = client.post(
+        f"/api/v1/news/{articles[0].id}/upvote", headers=headers
+    )
     assert response.status_code == 200
     assert response.json()["message"] == "Article upvoted"
 
@@ -183,6 +215,8 @@ def test_downvote_article(test_user_and_articles, test_token):
     user, articles = test_user_and_articles
     headers = {"Authorization": f"Bearer {test_token}"}
 
-    response = client.post(f"/api/v1/news/{articles[0].id}/upvote", headers=headers)
+    response = client.post(
+        f"/api/v1/news/{articles[0].id}/upvote", headers=headers
+    )
     assert response.status_code == 200
     assert response.json()["message"] == "Upvote removed"
