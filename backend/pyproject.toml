@@ -4,7 +4,7 @@ target-version = ["py312"]
 
 [tool.ruff]
 line-length = 79
-target-version = "py311"
+target-version = "py312"
 # PEP 8 only:
 lint.select = ["E", "W", "N", "I"]
 # Align with Black (PEP 8 allows flexibility here; this avoids false conflicts):
