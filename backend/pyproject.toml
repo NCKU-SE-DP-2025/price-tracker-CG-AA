@@ -1,0 +1,18 @@
+[tool.black]
+line-length = 79
+target-version = ["py312"]
+
+[tool.ruff]
+line-length = 79
+target-version = "py312"
+# PEP 8 only:
+lint.select = ["E", "W", "N", "I"]
+# Align with Black (PEP 8 allows flexibility here; this avoids false conflicts):
+lint.ignore = ["E203"]
+
+# Let Black handle formatting; Ruff will lint/fix PEP 8, including imports & naming.
+fix = true
+
+# (Optional) Limit what Ruff scans (recommended for larger repos):
+# src = ["src", "tests"]
+# exclude = ["dist", "build", ".venv"]
