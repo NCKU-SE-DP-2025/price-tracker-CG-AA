@@ -4,3 +4,10 @@ __pycache__
 .vscode
 .venv
 backend/news_database.db
+
+
+.coverage
+coverage.xml
+test.db
+test-report.html
+backend/assets/**
