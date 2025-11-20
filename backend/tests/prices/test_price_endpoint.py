@@ -1,5 +1,6 @@
-from unittest.mock import patch
+from unittest.mock import AsyncMock, patch
 
+import httpx
 import pytest
 from fastapi.testclient import TestClient
 
@@ -32,11 +33,16 @@ def mock_necessities_data():
     ]
 
 
-@patch("main.requests.get")
-def test_get_necessities_prices(mock_get, mock_necessities_data):
-    mock_response = mock_get.return_value
-    mock_response.status_code = 200
-    mock_response.json.return_value = mock_necessities_data
+@patch("src.prices.router.httpx.AsyncClient")
+def test_get_necessities_prices(mock_async_client, mock_necessities_data):
+    mock_response = httpx.Response(
+        200,
+        json=mock_necessities_data,
+        request=httpx.Request("GET", "http://test.url"),
+    )
+    mock_async_client.return_value.__aenter__.return_value.get.return_value = (
+        mock_response
+    )
 
     response = client.get("/api/v1/prices/necessities-price")
 
@@ -48,11 +54,18 @@ def test_get_necessities_prices(mock_get, mock_necessities_data):
     assert data[1]["產品名稱"] == "味全林鳳營鮮乳"
 
 
-@patch("main.requests.get")
-def test_get_necessities_prices_with_query(mock_get, mock_necessities_data):
-    mock_response = mock_get.return_value
-    mock_response.status_code = 200
-    mock_response.json.return_value = mock_necessities_data
+@patch("src.prices.router.httpx.AsyncClient")
+def test_get_necessities_prices_with_query(
+    mock_async_client, mock_necessities_data
+):
+    mock_response = httpx.Response(
+        200,
+        json=mock_necessities_data,
+        request=httpx.Request("GET", "http://test.url"),
+    )
+    mock_async_client.return_value.__aenter__.return_value.get.return_value = (
+        mock_response
+    )
 
     response = client.get(
         "/api/v1/prices/necessities-price",
@@ -66,7 +79,7 @@ def test_get_necessities_prices_with_query(mock_get, mock_necessities_data):
     assert data[0]["產品名稱"] == "統一瑞穗高優質鮮乳"
 
 
-# @patch("main.requests.get")
+# @patch("src.prices.router.httpx.AsyncClient")
 # def test_get_necessities_prices_error_handling(mock_get):
 #     mock_response = mock_get.return_value
 #     mock_response.status_code = 400

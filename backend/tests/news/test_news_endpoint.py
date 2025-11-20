@@ -1,4 +1,6 @@
 import json
+import os
+import shutil
 from unittest.mock import Mock
 
 import pytest
@@ -7,21 +9,23 @@ from jose import jwt
 from sqlalchemy import StaticPool, create_engine
 from sqlalchemy.orm import sessionmaker
 
-from main import (
+from main import app
+from src.database import (
+    USER_NEWS_ASSOCIATION_TABLE as USER_NEWS_ASSOCIATION_TABLE,
+)
+from src.database import (
     Base,
     NewsArticle,
-    NewsSumaryRequestSchema,
-    PromptRequest,
     User,
-    app,
-    pwd_context,
-    session_opener,
-    user_news_association_table,
+    get_db,
 )
+from src.news.schemas import NewsSummaryRequestSchema
+from src.user.service import auth_service
 
 SECRET_KEY = "1892dhianiandowqd0n"
 ALGORITHM = "HS256"
 SQLALCHEMY_DATABASE_URL = "sqlite:///./test.db"
+DATABASE_FILE = "./test.db"
 engine = create_engine(
     SQLALCHEMY_DATABASE_URL,
     connect_args={"check_same_thread": False},
@@ -41,7 +45,7 @@ def override_session_opener():
         db.close()
 
 
-app.dependency_overrides[session_opener] = override_session_opener
+app.dependency_overrides[get_db] = override_session_opener
 client = TestClient(app)
 
 
@@ -54,7 +58,7 @@ def clear_users():
 
 @pytest.fixture(scope="module")
 def test_user(clear_users):
-    hashed_password = pwd_context.hash("testpassword")
+    hashed_password = auth_service.get_password_hash("testpassword")
 
     with next(override_session_opener()) as db:
         user = User(username="testuser", hashed_password=hashed_password)
@@ -104,6 +108,13 @@ def test_user_and_articles(test_user, test_articles):
     return test_user, test_articles
 
 
+@pytest.fixture(scope="session", autouse=True)
+def cleanup():
+    yield
+    if os.path.exists(DATABASE_FILE):
+        os.remove(DATABASE_FILE)
+
+
 def test_read_news(test_articles):
     response = client.get("/api/v1/news/news")
     assert response.status_code == 200
@@ -128,7 +139,7 @@ def test_read_user_news(test_user, test_token, test_articles):
 
 
 def mock_openai(mocker, return_content):
-    mock_openai_client = mocker.patch("main.OpenAI")
+    mock_openai_client = mocker.patch("src.news.service.OpenAI")
 
     mock_message = Mock()
     mock_message.content = return_content
@@ -147,17 +158,18 @@ def mock_openai(mocker, return_content):
 
 
 def test_search_news(mocker):
-    mock_openai(mocker, "keywords")
+    # Mock OpenAI keyword extraction
+    mock_openai(mocker, "雞蛋 價格")
 
-    mock_get_new_info = mocker.patch(
-        "main.get_new_info",
+    # Mock the UDN API response (_fetch_news_from_api)
+    mock_fetch_api = mocker.patch(
+        "src.news.service.NewsProcessor._fetch_news_from_api",
         return_value=[{"titleLink": "http://example.com/news1"}],
     )
 
-    mock_get = mocker.patch(
-        "main.requests.get",
-        return_value=mocker.Mock(
-            text="""
+    # Mock requests.get for article scraping
+    mock_response = mocker.Mock()
+    mock_response.text = """
         <html>
         <h1 class="article-content__title">Test Title</h1>
         <time class="article-content__time">2024-09-10</time>
@@ -166,7 +178,11 @@ def test_search_news(mocker):
         </section>
         </html>
         """
-        ),
+    mock_response.raise_for_status = mocker.Mock()
+
+    mock_get = mocker.patch(
+        "src.news.service.requests.get",
+        return_value=mock_response,
     )
 
     request_body = {"prompt": "Test search prompt"}
@@ -181,6 +197,10 @@ def test_search_news(mocker):
     assert data[0]["time"] == "2024-09-10"
     assert data[0]["content"] == "This is a test paragraph."
 
+    # Verify the mock calls
+    mock_fetch_api.assert_called_once_with("雞蛋 價格", is_initial=False)
+    mock_get.assert_called_once_with("http://example.com/news1", timeout=10)
+
 
 def test_news_summary(mocker, test_token):
     headers = {"Authorization": f"Bearer {test_token}"}
@@ -189,7 +209,7 @@ def test_news_summary(mocker, test_token):
     )
     mock_openai(mocker, openai_response)
 
-    request_body = NewsSumaryRequestSchema(content="Test news content")
+    request_body = NewsSummaryRequestSchema(content="Test news content")
     response = client.post(
         "/api/v1/news/news_summary", json=request_body.dict(), headers=headers
     )
