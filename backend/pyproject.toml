@@ -1,7 +1,6 @@
 [tool.black]
 line-length = 88
 target-version = ["py312"]
-fix = true
 
 [tool.ruff]
 line-length = 88
@@ -9,7 +8,7 @@ target-version = "py312"
 # PEP 8 only:
 lint.select = ["E", "W", "N", "I"]
 # Align with Black (PEP 8 allows flexibility here; this avoids false conflicts):
-lint.ignore = ["E203"]
+lint.ignore = ["E203", "E501"]
 
 # Let Black handle formatting; Ruff will lint/fix PEP 8, including imports & naming.
 fix = true
