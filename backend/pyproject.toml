@@ -1,9 +1,10 @@
 [tool.black]
-line-length = 79
+line-length = 88
 target-version = ["py312"]
+fix = true
 
 [tool.ruff]
-line-length = 79
+line-length = 88
 target-version = "py312"
 # PEP 8 only:
 lint.select = ["E", "W", "N", "I"]
