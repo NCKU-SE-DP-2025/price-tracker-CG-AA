@@ -102,7 +102,7 @@ class NewsCrawlerBase(metaclass=abc.ABCMeta):
         """
 
         if not self._is_valid_url(url):
-            raise DomainMismatchError(url)
+            raise DomainMismatchError(str(url))
         return self.parse(url)
 
     @staticmethod
@@ -130,8 +130,8 @@ class NewsCrawlerBase(metaclass=abc.ABCMeta):
         :param url: The URL to be checked for validity.
         :return: True if the URL is valid, False otherwise.
         """
-        main_domain = tldextract.extract(self.news_website_url).registered_domain
-        url_domain = tldextract.extract(url).registered_domain
+        main_domain = tldextract.extract(str(self.news_website_url)).registered_domain
+        url_domain = tldextract.extract(str(url)).registered_domain
 
         if url_domain == main_domain:
             return True
