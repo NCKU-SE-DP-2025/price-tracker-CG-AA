@@ -36,7 +36,7 @@ from bs4 import BeautifulSoup
 from requests import Response
 from sqlalchemy.orm import Session
 
-from .base import Headline, News, NewsCrawlerBase, NewsWithSummary
+from .crawler_base import Headline, News, NewsCrawlerBase, NewsWithSummary
 
 
 class UDNCrawler(NewsCrawlerBase):
