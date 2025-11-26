@@ -2,12 +2,15 @@ import os
 
 import sentry_sdk
 from apscheduler.schedulers.background import BackgroundScheduler
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 
+from src.container import get_openai_service
+from src.crawler.crawler_base import NewsWithSummary
+from src.crawler.udn_crawler import UDNCrawler
 from src.database import NewsArticle, db_instance
 from src.news.router import router as news_router
-from src.news.service import NewsProcessor
+from src.openai.service import OpenAIService
 from src.prices.router import router as prices_router
 from src.user.router import router as user_router
 
@@ -19,11 +22,6 @@ sentry_sdk.init(
 
 app = FastAPI()
 bgs = BackgroundScheduler()
-
-# It's recommended to load secrets from environment variables
-# For local development, you can set this before running the app:
-# export OPENAI_API_KEY='your_key_here'
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "xxx")
 
 
 app.add_middleware(
@@ -44,8 +42,42 @@ def fetch_and_store_news(is_initial: bool = False):
                 print("Database is not empty. Skipping initial population.")
                 return
 
-            news_processor = NewsProcessor(db, OPENAI_API_KEY)
-            news_processor.process_news(is_initial=is_initial)
+            crawler = UDNCrawler(timeout=10)
+            open_ai_service = get_openai_service()
+
+            # mimic old behavior: initial run fetches multiple pages, later runs only one
+            search_term = "價格"
+            page = (1, 10) if is_initial else 1
+
+            headlines = crawler.get_headline(search_term=search_term, page=page)
+            print(f"Fetched {len(headlines)} headlines from UDN.")
+
+            for headline in headlines:
+                try:
+                    news = crawler.parse(str(headline.url))
+
+                    # --- build NewsWithSummary from News ---
+                    # Expecting something like: {"summary": "...", "reason": "..."}
+                    summary_data = open_ai_service.summarize_article([news.content])
+                    if not summary_data:
+                        print(f"Skipping article (no summary): {headline.url}")
+                        continue
+
+                    news_with_summary = NewsWithSummary(
+                        title=news.title,
+                        url=news.url,
+                        time=news.time,
+                        content=news.content,
+                        summary=summary_data["summary"],
+                        reason=summary_data["reason"],
+                    )
+                    # --------------------------------------
+
+                    crawler.save(news_with_summary, db)
+                    print(f"Saved article: {news_with_summary.title}")
+                except Exception as e:
+                    print(f"Error processing article {headline.url}: {e}")
+
             print("News fetch job finished.")
         except Exception as e:
             print(f"An error occurred during news processing: {e}")
