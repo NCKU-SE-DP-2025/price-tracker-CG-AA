@@ -11,3 +11,4 @@ coverage.xml
 test.db
 test-report.html
 backend/assets/**
+assets
