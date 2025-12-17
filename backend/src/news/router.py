@@ -22,12 +22,15 @@ OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "xxx")
 @router.get("/news")
 def read_news(db: Session = Depends(get_db)):
     news_repo = NewsArticleRepository(db)
-    news = db.query(NewsArticle).order_by(NewsArticle.time.desc()).all()
-    result = []
-    for n in news:
-        upvotes, upvoted = news_repo.get_article_upvote_details(n.id, None)
-        result.append({**n.__dict__, "upvotes": upvotes, "is_upvoted": upvoted})
-    return result
+    news_with_upvotes = news_repo.get_all_news_with_upvotes(user_id=None)
+    return [
+        {
+            **article.__dict__,
+            "upvotes": upvotes,
+            "is_upvoted": is_upvoted,
+        }
+        for article, upvotes, is_upvoted in news_with_upvotes
+    ]
 
 
 @router.get("/user_news")
@@ -36,20 +39,15 @@ def read_user_news(
     current_user: User = Depends(auth_service.get_current_user),
 ):
     news_repo = NewsArticleRepository(db)
-    news = db.query(NewsArticle).order_by(NewsArticle.time.desc()).all()
-    result = []
-    for article in news:
-        upvotes, upvoted = news_repo.get_article_upvote_details(
-            article.id, current_user.id
-        )
-        result.append(
-            {
-                **article.__dict__,
-                "upvotes": upvotes,
-                "is_upvoted": upvoted,
-            }
-        )
-    return result
+    news_with_upvotes = news_repo.get_all_news_with_upvotes(user_id=current_user.id)
+    return [
+        {
+            **article.__dict__,
+            "upvotes": upvotes,
+            "is_upvoted": is_upvoted,
+        }
+        for article, upvotes, is_upvoted in news_with_upvotes
+    ]
 
 
 @router.post("/search_news", response_model=list[NewsSearchResultSchema])

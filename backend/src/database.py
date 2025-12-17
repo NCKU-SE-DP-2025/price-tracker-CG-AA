@@ -8,9 +8,12 @@ from sqlalchemy import (
     String,
     Table,
     Text,
+    case,
     create_engine,
     delete,
+    func,
     insert,
+    literal,
     select,
 )
 from sqlalchemy.exc import SQLAlchemyError
@@ -158,6 +161,71 @@ class NewsArticleRepository:
                 is not None
             )
         return count, voted
+
+    def get_all_news_with_upvotes(
+        self, user_id: int | None = None
+    ) -> list[tuple[NewsArticle, int, bool]]:
+        """
+        Fetch all news articles with upvote counts and user's upvote status
+        in a single optimized query using JOINs/subqueries.
+
+        :param user_id: The current user's ID, or None for anonymous users.
+        :return: List of tuples (NewsArticle, upvotes_count, is_upvoted).
+        """
+        # Subquery for upvote counts per article
+        upvote_count_subq = (
+            self.db.query(
+                USER_NEWS_ASSOCIATION_TABLE.c.news_articles_id,
+                func.count().label("upvotes"),
+            )
+            .group_by(USER_NEWS_ASSOCIATION_TABLE.c.news_articles_id)
+            .subquery()
+        )
+
+        if user_id is not None:
+            # Subquery for user's upvoted article IDs
+            user_upvote_subq = (
+                self.db.query(USER_NEWS_ASSOCIATION_TABLE.c.news_articles_id)
+                .filter(USER_NEWS_ASSOCIATION_TABLE.c.user_id == user_id)
+                .subquery()
+            )
+
+            # Main query with both upvote count and user's upvote status
+            query = (
+                self.db.query(
+                    NewsArticle,
+                    func.coalesce(upvote_count_subq.c.upvotes, 0).label("upvotes"),
+                    case(
+                        (user_upvote_subq.c.news_articles_id.isnot(None), True),
+                        else_=False,
+                    ).label("is_upvoted"),
+                )
+                .outerjoin(
+                    upvote_count_subq,
+                    NewsArticle.id == upvote_count_subq.c.news_articles_id,
+                )
+                .outerjoin(
+                    user_upvote_subq,
+                    NewsArticle.id == user_upvote_subq.c.news_articles_id,
+                )
+                .order_by(NewsArticle.time.desc())
+            )
+        else:
+            # Query without user upvote status (anonymous user)
+            query = (
+                self.db.query(
+                    NewsArticle,
+                    func.coalesce(upvote_count_subq.c.upvotes, 0).label("upvotes"),
+                    literal(False).label("is_upvoted"),
+                )
+                .outerjoin(
+                    upvote_count_subq,
+                    NewsArticle.id == upvote_count_subq.c.news_articles_id,
+                )
+                .order_by(NewsArticle.time.desc())
+            )
+
+        return query.all()
 
     def exists(self, article_id: int) -> bool:
         return self.db.query(NewsArticle).filter_by(id=article_id).first() is not None
