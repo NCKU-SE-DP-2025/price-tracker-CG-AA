@@ -59,6 +59,13 @@ async def search_news(request: PromptRequest, db: Session = Depends(get_db)):
     """
     news_processor = NewsProcessor(db, OPENAI_API_KEY)
     results = news_processor.search_news_by_prompt(request.prompt)
+
+    if not results:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="No news articles found for the given prompt",
+        )
+
     return results
 
 
