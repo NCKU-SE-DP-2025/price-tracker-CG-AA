@@ -230,7 +230,9 @@ class NewsProcessor:
                 )
                 news_list.append(detailed_news)
             except Exception as e:
-                print(f"Error processing article {url}: {e}")
+                print(
+                    f"Error processing article {url} [{type(e).__name__}]: {e}"
+                )
                 continue
 
         # Step 4: Sort by time (newest first) and return
