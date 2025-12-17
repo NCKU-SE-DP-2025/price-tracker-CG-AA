@@ -1,92 +1,11 @@
-from contextlib import contextmanager
 from typing import Union
 
-from sqlalchemy import (
-    Column,
-    ForeignKey,
-    Integer,
-    String,
-    Table,
-    Text,
-    case,
-    create_engine,
-    delete,
-    func,
-    insert,
-    literal,
-    select,
-)
+from sqlalchemy import case, delete, func, insert, literal, select
 from sqlalchemy.exc import SQLAlchemyError
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import Session, relationship, sessionmaker
+from sqlalchemy.orm import Session
 
-from .crawler.crawler_base import NewsWithSummary
-
-Base = declarative_base()
-
-USER_NEWS_ASSOCIATION_TABLE = Table(
-    "user_news_upvotes",
-    Base.metadata,
-    Column("user_id", Integer, ForeignKey("users.id"), primary_key=True),
-    Column(
-        "news_articles_id",
-        Integer,
-        ForeignKey("news_articles.id"),
-        primary_key=True,
-    ),
-)
-
-
-class User(Base):
-    __tablename__ = "users"
-    id = Column(Integer, primary_key=True, autoincrement=True)
-    username = Column(String(50), unique=True, nullable=False)
-    hashed_password = Column(String(200), nullable=False)
-    upvoted_news = relationship(
-        "NewsArticle",
-        secondary=USER_NEWS_ASSOCIATION_TABLE,
-        back_populates="upvoted_by_users",
-    )
-
-
-class NewsArticle(Base):
-    __tablename__ = "news_articles"
-    id = Column(Integer, primary_key=True, autoincrement=True)
-    url = Column(String, unique=True, nullable=False)
-    title = Column(String, nullable=False)
-    time = Column(String, nullable=False)
-    content = Column(Text, nullable=False)
-    summary = Column(Text, nullable=False)
-    reason = Column(Text, nullable=False)
-    upvoted_by_users = relationship(
-        "User",
-        secondary=USER_NEWS_ASSOCIATION_TABLE,
-        back_populates="upvoted_news",
-    )
-
-
-class Database:
-    def __init__(self, db_url: str = "sqlite:///news_database.db", echo: bool = True):
-        self.engine = create_engine(db_url, echo=echo)
-        self.SessionLocal = sessionmaker(
-            autocommit=False, autoflush=False, bind=self.engine
-        )
-        self._create_tables()
-
-    def _create_tables(self):
-        Base.metadata.create_all(self.engine)
-
-    @contextmanager
-    def get_session(self):
-        session = self.SessionLocal()
-        try:
-            yield session
-            session.commit()
-        except:
-            session.rollback()
-            raise
-        finally:
-            session.close()
+from ..crawler.crawler_base import NewsWithSummary
+from ..database.models import USER_NEWS_ASSOCIATION_TABLE, NewsArticle
 
 
 class NewsArticleRepository:
@@ -256,13 +175,3 @@ class NewsArticleRepository:
 
     def find_by_url(self, url: str) -> NewsArticle | None:
         return self.db.query(NewsArticle).filter_by(url=url).first()
-
-
-# Global database instance
-db_instance = Database()
-
-
-# Dependency for FastAPI or other frameworks
-def get_db():
-    with db_instance.get_session() as session:
-        yield session
