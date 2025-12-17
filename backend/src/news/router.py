@@ -5,7 +5,11 @@ from sqlalchemy.orm import Session
 
 from ..database import NewsArticle, NewsArticleRepository, User, get_db
 from ..user.service import auth_service
-from .schemas import NewsSummaryRequestSchema, PromptRequest
+from .schemas import (
+    NewsSearchResultSchema,
+    NewsSummaryRequestSchema,
+    PromptRequest,
+)
 from .service import NewsProcessor
 
 router = APIRouter(prefix="/api/v1/news", tags=["news"])
@@ -47,13 +51,22 @@ def read_user_news(
     return result
 
 
-@router.post("/search_news")
+@router.post("/search_news", response_model=list[NewsSearchResultSchema])
 async def search_news(request: PromptRequest, db: Session = Depends(get_db)):
-    raise HTTPException(
-        status_code=status.HTTP_404_NOT_FOUND,
-        detail="This search endpoint is deprecated. "
-        "News is now fetched automatically.",
-    )
+    """
+    Search for news articles based on a user prompt.
+    Uses AI to extract keywords and fetches detailed article content.
+    """
+    news_processor = NewsProcessor(db, OPENAI_API_KEY)
+    results = news_processor.search_news_by_prompt(request.prompt)
+
+    if not results:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="No news articles found for the given prompt",
+        )
+
+    return results
 
 
 @router.post("/news_summary")

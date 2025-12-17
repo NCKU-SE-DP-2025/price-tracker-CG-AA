@@ -3,8 +3,9 @@ from urllib.parse import quote
 
 import requests
 from bs4 import BeautifulSoup
-from openai import OpenAI
 from sqlalchemy.orm import Session
+
+from openai import OpenAI
 
 from ..database import NewsArticleRepository
 
@@ -41,6 +42,32 @@ class NewsProcessor:
                 break
 
         return all_news_data
+
+    def _extract_keywords(self, prompt: str) -> str | None:
+        """Extract keywords from user prompt using OpenAI."""
+        messages = [
+            {
+                "role": "system",
+                "content": (
+                    "你是一個關鍵字提取機器人，用戶將會輸入一段文字，"
+                    "表示其希望看見的新聞內容，請提取出用戶希望看見的關鍵字，"
+                    "請截取最重要的關鍵字即可，避免出現「新聞」、「資訊」等混淆搜尋引擎的字詞。"
+                    "(僅須回答關鍵字，若有多個關鍵字，請以空格分隔)"
+                ),
+            },
+            {"role": "user", "content": prompt},
+        ]
+
+        try:
+            completion = self.ai_client.chat.completions.create(
+                model="gpt-3.5-turbo",
+                messages=messages,
+            )
+            keywords = completion.choices[0].message.content
+            return keywords.strip() if keywords else None
+        except Exception as e:
+            print(f"Error extracting keywords with OpenAI: {e}")
+            return None
 
     def _check_relevance(self, title: str) -> bool:
         messages = [
@@ -161,3 +188,52 @@ class NewsProcessor:
             self.news_repo.add_article(detailed_news)
 
             print(f"Added article: {detailed_news['title']}")
+
+    def search_news_by_prompt(self, prompt: str) -> list[dict]:
+        """
+        Search for news articles based on a user prompt.
+
+        1. Extract keywords from the prompt using AI
+        2. Fetch news articles using those keywords
+        3. Scrape detailed content from each article
+        4. Return sorted results by time
+        """
+        # Step 1: Extract keywords from prompt
+        keywords = self._extract_keywords(prompt)
+        if not keywords:
+            print(f"Failed to extract keywords from prompt: {prompt}")
+            return []
+
+        print(f"Extracted keywords: {keywords}")
+
+        # Step 2: Fetch news items using the extracted keywords
+        news_items = self._fetch_news_from_api(keywords, is_initial=False)
+        if not news_items:
+            print("No news items found")
+            return []
+
+        # Step 3: Scrape detailed content from each article
+        news_list = []
+        for item in news_items:
+            url = item.get("titleLink")
+            if not url:
+                continue
+
+            try:
+                detailed_news = self._scrape_article_details(url)
+                if not detailed_news:
+                    continue
+
+                # Join content paragraphs into a single string
+                detailed_news["content"] = " ".join(
+                    detailed_news.get("content", [])
+                )
+                news_list.append(detailed_news)
+            except Exception as e:
+                print(
+                    f"Error processing article {url} [{type(e).__name__}]: {e}"
+                )
+                continue
+
+        # Step 4: Sort by time (newest first) and return
+        return sorted(news_list, key=lambda x: x.get("time", ""), reverse=True)

@@ -4,7 +4,9 @@ from jose import jwt
 from sqlalchemy import StaticPool, create_engine
 from sqlalchemy.orm import sessionmaker
 
-from main import Base, User, app, pwd_context, session_opener
+from main import app
+from src.database import Base, User, get_db
+from src.user.service import auth_service
 
 SECRET_KEY = "1892dhianiandowqd0n"
 ALGORITHM = "HS256"
@@ -23,7 +25,7 @@ TestingSessionLocal = sessionmaker(
 Base.metadata.create_all(bind=engine)
 
 
-def override_session_opener():
+def override_get_db():
     try:
         db = TestingSessionLocal()
         yield db
@@ -31,23 +33,23 @@ def override_session_opener():
         db.close()
 
 
-app.dependency_overrides[session_opener] = override_session_opener
+app.dependency_overrides[get_db] = override_get_db
 
 client = TestClient(app)
 
 
 @pytest.fixture(scope="module")
 def clear_users():
-    with next(override_session_opener()) as db:
+    with next(override_get_db()) as db:
         db.query(User).delete()
         db.commit()
 
 
 @pytest.fixture(scope="module")
 def test_user(clear_users):
-    hashed_password = pwd_context.hash("testpassword")
+    hashed_password = auth_service.get_password_hash("testpassword")
 
-    with next(override_session_opener()) as db:
+    with next(override_get_db()) as db:
         user = User(username="testuser", hashed_password=hashed_password)
         db.add(user)
         db.commit()
@@ -64,12 +66,13 @@ def test_token(test_user):
 
 
 def test_register_user():
+
     response = client.post(
         "/api/v1/users/register",
         json={"username": "newuser", "password": "newpassword"},
     )
 
-    assert response.status_code == 200
+    assert response.status_code == 201
     data = response.json()
     assert data["username"] == "newuser"
 

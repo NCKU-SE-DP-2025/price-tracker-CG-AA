@@ -153,6 +153,9 @@ class NewsArticleRepository:
             self.db.commit()
             return "Article upvoted"
 
+    def find_by_url(self, url: str) -> NewsArticle | None:
+        return self.db.query(NewsArticle).filter_by(url=url).first()
+
 
 # Global database instance
 db_instance = Database()
