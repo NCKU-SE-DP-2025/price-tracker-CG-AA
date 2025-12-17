@@ -1,12 +1,9 @@
-import os
-
+from .config import settings
 from .crawler.udn_crawler import UDNCrawler
 from .openai.service import OpenAIService
 
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "xxx")
-
 udn_crawler = UDNCrawler()
-openai_service = OpenAIService(OPENAI_API_KEY)
+openai_service = OpenAIService(settings.OPENAI_API_KEY)
 
 
 def get_udn_crawler() -> UDNCrawler:

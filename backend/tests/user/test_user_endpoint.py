@@ -9,11 +9,11 @@ from sqlalchemy import StaticPool, create_engine
 from sqlalchemy.orm import sessionmaker
 
 from main import app
+from src.config import settings
 from src.database import Base, User, get_db
 from src.user.service import auth_service
 
-SECRET_KEY = "1892dhianiandowqd0n"
-ALGORITHM = "HS256"
+ALGORITHM = settings.JWT_ALGORITHM
 # SQLALCHEMY_DATABASE_URL = "sqlite:///:memory:"
 SQLALCHEMY_DATABASE_URL = "sqlite:///./test.db"
 engine = create_engine(
@@ -22,9 +22,7 @@ engine = create_engine(
     poolclass=StaticPool,
 )
 
-TestingSessionLocal = sessionmaker(
-    autocommit=False, autoflush=False, bind=engine
-)
+TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 Base.metadata.create_all(bind=engine)
 
@@ -64,7 +62,7 @@ def test_user(clear_users):
 @pytest.fixture(scope="module")
 def test_token(test_user):
     access_token = jwt.encode(
-        {"sub": test_user.username}, SECRET_KEY, algorithm=ALGORITHM
+        {"sub": test_user.username}, settings.JWT_SECRET_KEY, algorithm=ALGORITHM
     )
     return access_token
 

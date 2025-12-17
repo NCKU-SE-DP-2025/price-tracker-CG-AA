@@ -1,5 +1,3 @@
-import os
-
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
@@ -16,7 +14,6 @@ from .schemas import (
 from .service import NewsProcessor
 
 router = APIRouter(prefix="/api/v1/news", tags=["news"])
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "xxx")
 
 
 @router.get("/news")

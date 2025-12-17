@@ -5,6 +5,7 @@ from jose import JWTError, jwt
 from passlib.context import CryptContext
 from sqlalchemy.orm import Session
 
+from ..config import settings
 from ..database import User, get_db
 from .dependencies import oauth2_scheme
 
@@ -15,9 +16,7 @@ class AuthService:
         self.secret_key = secret_key
         self.algorithm = algorithm
 
-    def verify_password(
-        self, plain_password: str, hashed_password: str
-    ) -> bool:
+    def verify_password(self, plain_password: str, hashed_password: str) -> bool:
         return self.pwd_context.verify(plain_password, hashed_password)
 
     def get_password_hash(self, password: str) -> str:
@@ -33,18 +32,12 @@ class AuthService:
             else datetime.utcnow() + timedelta(minutes=15)
         )
         to_encode.update({"exp": expire})
-        encoded_jwt = jwt.encode(
-            to_encode, self.secret_key, algorithm=self.algorithm
-        )
+        encoded_jwt = jwt.encode(to_encode, self.secret_key, algorithm=self.algorithm)
         return encoded_jwt
 
-    def authenticate_user(
-        self, db: Session, username: str, password: str
-    ) -> User:
+    def authenticate_user(self, db: Session, username: str, password: str) -> User:
         user = db.query(User).filter(User.username == username).first()
-        if not user or not self.verify_password(
-            password, user.hashed_password
-        ):
+        if not user or not self.verify_password(password, user.hashed_password):
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Incorrect username or password",
@@ -63,9 +56,7 @@ class AuthService:
             headers={"WWW-Authenticate": "Bearer"},
         )
         try:
-            payload = jwt.decode(
-                token, self.secret_key, algorithms=[self.algorithm]
-            )
+            payload = jwt.decode(token, self.secret_key, algorithms=[self.algorithm])
             username: str | None = payload.get("sub")
             if username is None:
                 raise credentials_exception
@@ -77,4 +68,6 @@ class AuthService:
         return user
 
 
-auth_service = AuthService(secret_key="1892dhianiandowqd0n")
+auth_service = AuthService(
+    secret_key=settings.JWT_SECRET_KEY, algorithm=settings.JWT_ALGORITHM
+)

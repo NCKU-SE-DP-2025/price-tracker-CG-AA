@@ -46,6 +46,7 @@ pre_commit==4.3.0
 pyasn1==0.6.0
 pydantic==2.7.4
 pydantic_core==2.18.4
+pydantic-settings==2.3.4
 Pygments==2.18.0
 pytest==8.2.2
 pytest-mock==3.14.0

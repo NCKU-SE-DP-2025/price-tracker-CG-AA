@@ -39,6 +39,7 @@ jobs:
 
       - name: Run integration tests (with mock DB)
         env:
+          JWT_SECRET_KEY: ${{ secrets.JWT_SECRET_KEY }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
         run: |
           cd backend
