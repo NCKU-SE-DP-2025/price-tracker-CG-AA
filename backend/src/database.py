@@ -1,4 +1,5 @@
 from contextlib import contextmanager
+from typing import Union
 
 from sqlalchemy import (
     Column,
@@ -12,8 +13,11 @@ from sqlalchemy import (
     insert,
     select,
 )
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import Session, relationship, sessionmaker
+
+from .crawler.crawler_base import NewsWithSummary
 
 Base = declarative_base()
 
@@ -59,9 +63,7 @@ class NewsArticle(Base):
 
 
 class Database:
-    def __init__(
-        self, db_url: str = "sqlite:///news_database.db", echo: bool = True
-    ):
+    def __init__(self, db_url: str = "sqlite:///news_database.db", echo: bool = True):
         self.engine = create_engine(db_url, echo=echo)
         self.SessionLocal = sessionmaker(
             autocommit=False, autoflush=False, bind=self.engine
@@ -88,24 +90,58 @@ class NewsArticleRepository:
     def __init__(self, db_session: Session):
         self.db = db_session
 
-    def add_article(self, article_data: dict) -> NewsArticle:
+    def add_article(
+        self, article_data: Union[NewsWithSummary, dict]
+    ) -> NewsArticle | None:
         """
         Adds a new news article to the database.
-        :param article_data: A dictionary containing news article data.
-        :return: The created NewsArticle object.
+        Accepts either a NewsWithSummary Pydantic model or a dictionary.
+        Skips duplicates based on URL.
+
+        :param article_data: A NewsWithSummary model or dictionary containing news article data.
+        :return: The created NewsArticle object, or None if duplicate.
         """
+        # Convert Pydantic model to dict if needed
+        if isinstance(article_data, NewsWithSummary):
+            data = {
+                "url": str(article_data.url),
+                "title": article_data.title,
+                "time": article_data.time,
+                "content": article_data.content,
+                "summary": article_data.summary,
+                "reason": article_data.reason,
+            }
+        else:
+            data = article_data
+
+        # Check for duplicate by URL
+        if self.find_by_url(str(data["url"])):
+            print(f"Article already exists: {data['url']}")
+            return None
+
+        # Handle content - join if list, use as-is if string
+        content = data["content"]
+        if isinstance(content, list):
+            content = " ".join(content)
+
         new_article = NewsArticle(
-            url=article_data["url"],
-            title=article_data["title"],
-            time=article_data["time"],
-            content=" ".join(article_data["content"]),
-            summary=article_data["summary"],
-            reason=article_data["reason"],
+            url=str(data["url"]),
+            title=data["title"],
+            time=data["time"],
+            content=content,
+            summary=data["summary"],
+            reason=data["reason"],
         )
-        self.db.add(new_article)
-        self.db.commit()
-        self.db.refresh(new_article)
-        return new_article
+
+        try:
+            self.db.add(new_article)
+            self.db.commit()
+            self.db.refresh(new_article)
+            return new_article
+        except SQLAlchemyError as e:
+            self.db.rollback()
+            print(f"Database commit failed: {e}")
+            raise
 
     def get_article_upvote_details(self, article_id: int, user_id: int | None):
         count = (
@@ -124,10 +160,7 @@ class NewsArticleRepository:
         return count, voted
 
     def exists(self, article_id: int) -> bool:
-        return (
-            self.db.query(NewsArticle).filter_by(id=article_id).first()
-            is not None
-        )
+        return self.db.query(NewsArticle).filter_by(id=article_id).first() is not None
 
     def toggle_upvote(self, article_id: int, user_id: int) -> str:
         existing_upvote = self.db.execute(
@@ -152,6 +185,9 @@ class NewsArticleRepository:
             self.db.execute(insert_stmt)
             self.db.commit()
             return "Article upvoted"
+
+    def find_by_url(self, url: str) -> NewsArticle | None:
+        return self.db.query(NewsArticle).filter_by(url=url).first()
 
 
 # Global database instance

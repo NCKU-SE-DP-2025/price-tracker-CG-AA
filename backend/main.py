@@ -2,12 +2,16 @@ import os
 
 import sentry_sdk
 from apscheduler.schedulers.background import BackgroundScheduler
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 
+from src.container import get_openai_service
+from src.crawler.crawler_base import NewsWithSummary
+from src.crawler.udn_crawler import UDNCrawler
 from src.database import NewsArticle, db_instance
+from src.jobs import news_jobs
 from src.news.router import router as news_router
-from src.news.service import NewsProcessor
+from src.openai.service import OpenAIService
 from src.prices.router import router as prices_router
 from src.user.router import router as user_router
 
@@ -20,11 +24,6 @@ sentry_sdk.init(
 app = FastAPI()
 bgs = BackgroundScheduler()
 
-# It's recommended to load secrets from environment variables
-# For local development, you can set this before running the app:
-# export OPENAI_API_KEY='your_key_here'
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "xxx")
-
 
 app.add_middleware(
     CORSMiddleware,
@@ -35,29 +34,13 @@ app.add_middleware(
 )
 
 
-def fetch_and_store_news(is_initial: bool = False):
-    """Wrapper function to fetch, process, and store news."""
-    print(f"Starting news fetch job. Initial run: {is_initial}")
-    with db_instance.get_session() as db:
-        try:
-            if is_initial and db.query(NewsArticle).count() > 0:
-                print("Database is not empty. Skipping initial population.")
-                return
-
-            news_processor = NewsProcessor(db, OPENAI_API_KEY)
-            news_processor.process_news(is_initial=is_initial)
-            print("News fetch job finished.")
-        except Exception as e:
-            print(f"An error occurred during news processing: {e}")
-
-
 @app.on_event("startup")
 def start_scheduler():
     # Run once on startup if the database is empty
-    fetch_and_store_news(is_initial=True)
+    news_jobs.fetch_and_store_news(is_initial=True)
 
     # Schedule to run periodically
-    bgs.add_job(fetch_and_store_news, "interval", minutes=100, args=[False])
+    bgs.add_job(news_jobs.fetch_and_store_news, "interval", minutes=100, args=[False])
     bgs.start()
 
 
