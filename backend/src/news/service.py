@@ -3,8 +3,9 @@ from urllib.parse import quote
 
 import requests
 from bs4 import BeautifulSoup
-from openai import OpenAI
 from sqlalchemy.orm import Session
+
+from openai import OpenAI
 
 from ..database import NewsArticleRepository
 
@@ -200,7 +201,7 @@ class NewsProcessor:
         # Step 1: Extract keywords from prompt
         keywords = self._extract_keywords(prompt)
         if not keywords:
-            print("Failed to extract keywords from prompt")
+            print(f"Failed to extract keywords from prompt: {prompt}")
             return []
 
         print(f"Extracted keywords: {keywords}")
