@@ -1,6 +1,5 @@
 import json
 import os
-import shutil
 from unittest.mock import Mock
 
 import pytest
