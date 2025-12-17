@@ -4,17 +4,20 @@ on:
   push:
     branches:
       - 'main'
+      - 'develop'
+      - 'fix/integration-test'
   pull_request:
     branches:
       - 'main'
+      - 'develop'
 
 jobs:
   test:
-    runs-on: ubuntu-latest
+    runs-on: F74144781
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Set up Python
         uses: actions/setup-python@v4
@@ -36,13 +39,14 @@ jobs:
 
       - name: Run integration tests (with mock DB)
         env:
+          JWT_SECRET_KEY: ${{ secrets.JWT_SECRET_KEY }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
         run: |
           cd backend
-          pytest tests/integration --cov=src --cov-report=xml --disable-warnings
+          pytest tests/* --cov=src --cov-report=xml --disable-warnings
 
       - name: Upload coverage report
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: coverage-report
           path: coverage.xml
