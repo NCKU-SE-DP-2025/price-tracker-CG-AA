@@ -10,9 +10,7 @@ from sqlalchemy.orm import sessionmaker
 
 from main import app
 from src.database import (
-    USER_NEWS_ASSOCIATION_TABLE as USER_NEWS_ASSOCIATION_TABLE,
-)
-from src.database import (
+    USER_NEWS_ASSOCIATION_TABLE,
     Base,
     NewsArticle,
     User,
