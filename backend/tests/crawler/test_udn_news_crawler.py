@@ -2,10 +2,9 @@ import unittest
 from unittest.mock import MagicMock, patch
 
 from requests.models import Response
-from sqlalchemy.orm import Session
 
 from src.crawler.exceptions import DomainMismatchError
-from src.crawler.udn_crawler import NewsWithSummary, UDNCrawler
+from src.crawler.udn_crawler import UDNCrawler
 
 
 class TestUDNCrawler(unittest.TestCase):
@@ -73,25 +72,6 @@ class TestUDNCrawler(unittest.TestCase):
         self.assertEqual(params["page"], 1)
         self.assertEqual(params["id"], "search:technology")
         self.assertEqual(params["channelId"], 2)
-
-    @patch("src.crawler.udn_crawler.Session")
-    def test_save_news(self, mock_session):
-        mock_db = MagicMock(spec=Session)
-        mock_db.query.return_value.filter_by.return_value.first.return_value = None
-
-        news = NewsWithSummary(
-            title="Test Title",
-            url="https://udn.com/news/test-news",
-            time="2023-09-08T00:00:00",
-            content="Test Content",
-            summary="Test Summary",
-            reason="Test Reason",
-        )
-        self.scraper.save(news, mock_db)
-
-        mock_db.add.assert_called_once()
-        self.assertEqual(mock_db.add.call_args[0][0].title, "Test Title")
-        mock_db.commit.assert_called_once()
 
     def test_parse_invalid_domain(self):
         invalid_url = "https://example.com/news/test-news"

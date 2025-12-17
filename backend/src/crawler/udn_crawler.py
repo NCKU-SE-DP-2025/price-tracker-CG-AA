@@ -37,10 +37,8 @@ from urllib.parse import quote
 import requests
 from bs4 import BeautifulSoup
 from requests import Response
-from sqlalchemy.exc import SQLAlchemyError
-from sqlalchemy.orm import Session
 
-from .crawler_base import Headline, News, NewsCrawlerBase, NewsWithSummary
+from .crawler_base import Headline, News, NewsCrawlerBase
 from .exceptions import DomainMismatchError
 
 
@@ -157,16 +155,3 @@ class UDNCrawler(NewsCrawlerBase):
             time=time_el.get_text(strip=True),
             content=" ".join(paragraphs),
         )
-
-    def save(self, news: NewsWithSummary, db: Session):
-        db.add(news)
-        self._commit_changes(db)
-
-    @staticmethod
-    def _commit_changes(db: Session):
-        try:
-            db.commit()
-        except SQLAlchemyError as e:
-            db.rollback()
-            print(f"Database commit failed: {e}")
-            raise

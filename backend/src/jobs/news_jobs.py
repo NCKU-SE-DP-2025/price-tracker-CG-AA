@@ -1,11 +1,11 @@
-from typing import Optional, Tuple, Union
+from typing import Tuple, Union
 
 from sqlalchemy.orm import Session
 
 from ..container import get_openai_service
 from ..crawler.crawler_base import NewsWithSummary
 from ..crawler.udn_crawler import UDNCrawler
-from ..database import NewsArticle, db_instance
+from ..database import NewsArticleRepository, db_instance
 
 # Configuration Constants
 SEARCH_TERM = "價格"
@@ -16,6 +16,8 @@ DEFAULT_PAGE = 1
 
 def _should_skip_initial_run(db: Session, is_initial: bool) -> bool:
     """Checks if the database is already populated during an initial run."""
+    from ..database import NewsArticle
+
     if is_initial and db.query(NewsArticle).count() > 0:
         print("Database is not empty. Skipping initial population.")
         return True
@@ -49,9 +51,11 @@ def _process_and_save_article(
             reason=summary_data["reason"],
         )
 
-        # Crawler.save commits immediately per requirements
-        crawler.save(news_with_summary, db)
-        print(f"Saved article: {news_with_summary.title}")
+        # Use repository to save article
+        repo = NewsArticleRepository(db)
+        saved_article = repo.add_article(news_with_summary)
+        if saved_article:
+            print(f"Saved article: {news_with_summary.title}")
 
     except Exception as e:
         print(f"Error processing article {headline.url}: {e}")

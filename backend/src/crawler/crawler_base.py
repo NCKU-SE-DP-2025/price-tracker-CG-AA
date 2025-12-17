@@ -1,7 +1,6 @@
 import abc
 
 from pydantic import AnyHttpUrl, BaseModel, Field
-from sqlalchemy.orm import Session
 from tldextract import tldextract
 
 from .exceptions import DomainMismatchError
@@ -104,21 +103,6 @@ class NewsCrawlerBase(metaclass=abc.ABCMeta):
         if not self._is_valid_url(url):
             raise DomainMismatchError(str(url))
         return self.parse(url)
-
-    @staticmethod
-    @abc.abstractmethod
-    def save(news: News, db: Session | None):
-        """
-        Save the news content to a persistent storage.
-
-        This method takes a News namedtuple containing the title, URL, publication time, and content of a news article,
-        and saves it to a persistent storage, such as a database. The method should handle the storage of the news
-        content, ensuring that duplicate news articles are not saved.
-
-        :param news: A News namedtuple containing the title, URL, time, and content of the news article.
-        :param db: An instance of the database session to use for saving the news content.
-        """
-        return NotImplemented
 
     def _is_valid_url(self, url: AnyHttpUrl | str) -> bool:
         """

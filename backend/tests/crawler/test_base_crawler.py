@@ -1,5 +1,4 @@
 import unittest
-from unittest.mock import patch
 
 from pydantic import AnyHttpUrl
 
@@ -21,10 +20,6 @@ class MockNewsCrawler(NewsCrawlerBase):
             time="2023-09-08T00:00:00",
             content="This is the content of the article.",
         )
-
-    @staticmethod
-    def save(news: News, db=None):
-        return True
 
 
 class TestNewsCrawlerBase(unittest.TestCase):
@@ -62,17 +57,6 @@ class TestNewsCrawlerBase(unittest.TestCase):
         self.assertEqual(news.url, "https://www.example.com/article")
         self.assertEqual(news.time, "2023-09-08T00:00:00")
         self.assertEqual(news.content, "This is the content of the article.")
-
-    @patch("src.crawler.crawler_base.Session")
-    def test_save(self, mock_db_session):
-        news = News(
-            title="Test Article",
-            url="https://www.example.com/article",
-            time="2023-09-08T00:00:00",
-            content="This is the content of the article.",
-        )
-        result = self.crawler.save(news, mock_db_session)
-        self.assertTrue(result)
 
 
 if __name__ == "__main__":
